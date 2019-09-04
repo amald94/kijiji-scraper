@@ -10,6 +10,7 @@ url = 'https://www.kijiji.ca/b-for-rent/ontario'
 baseurl = 'https://www.kijiji.ca'
 baseForOntario = '/c30349001l9004'
 pageNos = '/page-'
+apartment = 'v-apartments-condos'
 adurl = []
 listing = []
 
@@ -45,39 +46,37 @@ def getDetails(urls):
         for url in urls:
             print(url)
             listDetails = ""
-            #url = 'https://www.kijiji.ca/v-room-rental-roommate/oakville-halton-region/renting-a-private-furnished-room-very-clean-very-quiet-house/1456771236?enableSearchNavigationFlag=true'
             response = requests.get(url)
             soup = BeautifulSoup(response.text, "html.parser")
             adTitle = soup.select_one("h1[class*=title-2323565163]").text
-            #print(adTitle)
             title.append(adTitle)
             adPrice = soup.select_one("span[class*=currentPrice-2842943473]").text
-            #print(adPrice)
             prices.append(adPrice)
             adDescription = soup.find_all('div', attrs={'class' : 'descriptionContainer-3544745383'})
-            #print(description)
             description.append(adDescription)
             adLocation = soup.find('span', attrs={'class' : 'address-3617944557'})
-            #print(adLocation)
             location.append(adLocation)
             date = soup.find('time').text   
-            #print(date)
             datePosted.append(date)
-            #listFt = str(title) + "||" + str(price) + "||" + str(description) + "||" + str(location) + "||" + str(date) 
 
-            adfts = soup.find_all('dl', attrs={'class' : 'itemAttribute-983037059'})
-            for ft in adfts:
-                dt = ft.find('dt').text
-                #print(dt)
-                dd = ft.find('dd').text
-                #print(dd)
+            # get features from the listing 
+            # we have two kinds of listing apartments and room rentals.
 
-                listDetails = listDetails + str(dt) + ":" + str(dd)
+            if apartment in url:
+                adfts = soup.find_all('li', attrs={'class' : 'realEstateAttribute-3347692688'})
+                for ft in adfts:
+                    dd = ft.find('div').text
+                    listDetails = listDetails + str(dd) + " : "
+            else:                
+                adfts = soup.find_all('dl', attrs={'class' : 'itemAttribute-983037059'})
+                for ft in adfts:
+                    dt = ft.find('dt').text
+                    dd = ft.find('dd').text
+                    listDetails = listDetails + str(dt) + " : " + str(dd)
             features.append(listDetails)
 
             print("Scraping listing : ",str(i))
             i += 1
-        #print(listDetails)
         saveToDisk()
     except Exception as e: 
         print(e)
@@ -86,15 +85,8 @@ def getDetails(urls):
         
 def saveToDisk():
 
-    # adft = advt.split("||")
-    # print(advt)
-
-    df = pd.DataFrame({'Title':title,'Price':prices,'Description':description, 'Location':location,'Ddate Posted':datePosted, 'Location':location, 'Features' : features})
+    df = pd.DataFrame({'Title':title,'Price':prices,'Description':description, 'Location':location,'Ddate Posted':datePosted, 'Location':location, 'Features' : features, 'URL':adurl})
     df.to_csv('kijiji.csv',index=False)
     
-
-
-
-
 
 getUrls()
