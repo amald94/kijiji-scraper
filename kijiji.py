@@ -8,15 +8,15 @@ import numpy
 import time
 from os import path
 
-
 url = 'https://www.kijiji.ca/b-for-rent/ontario'
 baseurl = 'https://www.kijiji.ca'
 baseForOntario = '/c30349001l9004'
 pageNos = '/page-'
 apartment = 'v-apartments-condos'
+roomRent = 'room rent'
 adurl = []
 listing = []
-
+urlToSave = []
 title = []
 prices = []
 description = []
@@ -24,6 +24,9 @@ location = []
 datePosted = []
 features = []
 linksFromText = []
+listingType = []
+adId = []
+savePoints = [1000,2000,3000,4000,5000,6000,7000]
 
 def getUrls(noPages):
 
@@ -52,14 +55,15 @@ def getUrls(noPages):
 
 def getDetails(urls):
     
-    #urls = urls[3364:]
+    urls = urls[6766:]
     print(len(urls))
 
+    i =0;
     try:
-        i =0
         for url in urls:
             print(url)
             listDetails = ""
+            listDetailsTwo = []
             url = url.rstrip('\n')
             response = requests.get(url)
             soup = BeautifulSoup(response.text, "html.parser")
@@ -81,34 +85,53 @@ def getDetails(urls):
                 if apartment in url:
                     adfts = soup.find_all('li', attrs={'class' : 'realEstateAttribute-3347692688'})
                     for ft in adfts:
-                        dd = ft.find('div').text
-                        listDetails = listDetails + str(dd) + " : "
+                        #dd = ft.find('div').text
+                        dd = ft.find_all('div')
+                        listDetails = listDetails + str(dd) + " || "
+                    features.append(listDetails)
+                    listingType.append(apartment)
+                    urlToSave.append(url)
+                    adid = getAdId(url)
+                    adId.append(adid)
                 else:                
                     adfts = soup.find_all('dl', attrs={'class' : 'itemAttribute-983037059'})
                     for ft in adfts:
-                        dt = ft.find('dt').text
                         dd = ft.find('dd').text
-                        listDetails = listDetails + str(dt) + " : " + str(dd)
-                features.append(listDetails)
-
+                        dt = ft.find('dt').text
+                        listDetails = listDetails + str(dt) + " : " + str(dd) + " || "
+                    features.append(listDetails)
+                    listingType.append(roomRent)
+                    urlToSave.append(url)
+                    adid = getAdId(url)
+                    adId.append(adid)
                 print("Scraping listing : ",str(i))
                 #response.close()
                 i += 1
-                time.sleep(3)
+                if i in savePoints:
+                    saveToDisk(i)
+                    #break
+                time.sleep(1)
             except Exception as e:
                 pass
-        saveToDisk()
+        saveToDisk(i)
     except Exception as e: 
         print(e)
         pass
     #saveToDisk()
 
-        
-def saveToDisk():
+def getAdId(advt):
+    advtList = advt.split("/")
+    adlen = len(advtList)
+    return advtList[adlen-1]
+
+
+def saveToDisk(i):
     print("saving ***")
-    d = {'Title':title,'Price':prices,'Description':description, 'Location':location,'Ddate Posted':datePosted, 'Location':location, 'Features' : features, 'URL':adurl}
+    name='kijiji'+str(i)+'.csv'
+    d = {'adId':adId, 'Title':title,'Price':prices,'Description':description, 'Location':location,'Ddate Posted':datePosted, 'Location':location, 'Features' : features, 'URL':urlToSave, 'Type' : listingType}
     df = pd.concat([pd.Series(v, name=k) for k, v in d.items()], axis=1)
-    df.to_csv('kijiji.csv',index=False)
+    df.to_csv(name,index=False)
+    resetAll()
     
 def saveLinks(liks):
     with open('links.txt', 'w') as f:
@@ -117,6 +140,19 @@ def saveLinks(liks):
 
     f.close()
 
+def resetAll():
+    print('cleaning')
+    adId.clear()
+    title.clear()
+    prices.clear()
+    description.clear()
+    datePosted.clear()
+    location.clear()
+    features.clear()
+    urlToSave.clear()
+    listingType.clear()
+    
+
 # call main methond to start scraping by passing number of pages wanted to scrape  
-no_pages = 150
+no_pages = 300
 getUrls(no_pages)
